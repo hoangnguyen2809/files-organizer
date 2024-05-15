@@ -1,31 +1,57 @@
 #include <iostream>
 #include <filesystem>
-#include <clocale>
 #include <cwctype>
+#include <locale>
+#include <codecvt>
 #include <unordered_set>
+#include <Windows.h>
 
 namespace fs = std::filesystem;
+static const std::unordered_set<std::string> codeExtensions = { ".cpp", ".h", ".hpp", ".java", ".py", ".cs", ".rb", ".php", ".js", ".html", ".css", ".xml", ".json", ".ipynb" };
+static const std::unordered_set<std::string> docExtensions = { ".docx", ".doc" };
+static const std::unordered_set<std::string> imgExtensions = { ".jpg", ".png", ".gif"};
+static const std::unordered_set<std::string> videoExtensions = { ".mp4", ".avi", ".mkv" };
 
 std::string getCategoryFolder(const std::string& extension) {
-    static const std::unordered_set<std::string> codeExtensions = { ".cpp", ".h", ".hpp", ".java", ".py", ".cs", ".rb", ".php", ".js", ".html", ".css", ".xml", ".json" };
     if (extension == ".pdf") {
         return "PDF";
     }
-    else if (extension == ".docx" || extension == ".doc") {
+    else if (docExtensions.find(extension) != docExtensions.end()) {
         return "Documents";
     }
-    else if (extension == ".jpg" || extension == ".png" || extension == ".gif") {
+    else if (imgExtensions.find(extension) != imgExtensions.end()) {
         return "Images";
     }
-    else if (extension == ".mp4" || extension == ".avi" || extension == ".mkv") {
+    else if (videoExtensions.find(extension) != videoExtensions.end()) {
         return "Videos";
     }
     else if (codeExtensions.find(extension) != codeExtensions.end()) {
         return "Code";
     }
     else {
-        return "Other"; 
+        return "Other";
     }
+}
+
+std::string convertToString(const std::wstring& wstr) {
+    // Calculate the length of the required buffer
+    int bufferSize = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    // Allocate buffer
+    std::string str(bufferSize - 1, '\0');
+    // Convert wide string to narrow string
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], bufferSize, nullptr, nullptr);
+    return str;
+}
+
+void validPath(std::string& input)
+{
+    std::string path;
+    for (auto c : input)
+    {
+        if (c != '"')
+            path += c;
+    }
+    input = path;
 }
 
 int main() {
@@ -37,12 +63,14 @@ int main() {
     
     
     // Specify the path to the directory you want to access
-    std::cout << "Enter the path to your Download folder: ";
+    std::string input;
+    std::cout << "Enter the path to the folder you want to organize: ";
+    std::getline(std::cin, input);
     std::cout << std::endl;
-
-    fs::path folderPath = R"(D:\Downloads)";
+    validPath(input);
     
-    std::unordered_set<std::wstring> extensionsType;
+    fs::path folderPath = input;
+    
     int count = 0;
 
     try {
@@ -51,13 +79,13 @@ int main() {
             // Check if the entry is a regular file
             if (fs::is_regular_file(entry)) {
                 // Extract the file extension
-                std::wstring extension = entry.path().extension();
-                // Print the file extension
-                if (extensionsType.find(extension) == extensionsType.end())
-                {
-                    extensionsType.insert(extension);
-                    std::wcout << L"File extension: " << extension << std::endl;
-                }
+                std::wstring extensionWide = entry.path().extension();
+
+                std::string extension = convertToString(extensionWide);
+                std::cout << extension << "\t";
+                std::string categoryFolder = getCategoryFolder(extension);
+
+                std::cout << categoryFolder << std::endl;
             }
             count++;
         }
@@ -72,7 +100,7 @@ int main() {
     }
 
     std::cout << std::endl;
-    std::cout << "There are " << extensionsType.size() << " types of file" << std::endl;
+    std::cout << count;
     
 
     return 0;
