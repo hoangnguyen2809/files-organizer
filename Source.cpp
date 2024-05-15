@@ -86,8 +86,14 @@ int main() {
                 std::string categoryFolder = getCategoryFolder(extension);
 
                 std::cout << categoryFolder << std::endl;
+                fs::path categoryFolderPath = folderPath / categoryFolder;
+                // Create the category folder if it doesn't exist
+                if (!fs::exists(categoryFolderPath)) {
+                    fs::create_directory(categoryFolderPath);
+                }
+                // Move the file to the category folder
+                fs::rename(entry.path(), categoryFolderPath / entry.path().filename());
             }
-            count++;
         }
     }
     catch (const std::filesystem::filesystem_error& ex) {
@@ -100,7 +106,6 @@ int main() {
     }
 
     std::cout << std::endl;
-    std::cout << count;
     
 
     return 0;
